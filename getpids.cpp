@@ -46,6 +46,7 @@ unsigned getUptime(const std::string &pid) {
 
     if (!statFile.is_open()) {
         std::string err_message = "Error opening file: /proc/" + pid + "/stat";
+        std::cerr << err_message << std::endl;
         syslog(LOG_ERR, "%s", err_message.c_str());
         exit(1);
     }
@@ -96,6 +97,7 @@ std::unordered_map<unsigned, Process> getpids() {
                 std::string err_message = "Error opening file: /proc/" + pid + "/cmdline";
                 std::cerr << err_message << std::endl;
                 syslog(LOG_ERR, "%s", err_message.c_str());
+                exit(1);
             }
 
             std::getline(cmdlineFile, command);
