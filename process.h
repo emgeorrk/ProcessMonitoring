@@ -1,5 +1,3 @@
-#pragma once
-
 #ifndef AUDIT_PROCESS_H
 #define AUDIT_PROCESS_H
 

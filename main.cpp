@@ -1,18 +1,11 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-#include <csignal>
-#include <syslog.h>
 
 #include "getpids.h"
+#include "logger.h"
 
-constexpr int CHECK_INTERVAL_MS = 2000;
-
-void signalHandler(int signum) {
-    syslog(LOG_NOTICE, "AuditDaemon stopped");
-    closelog();
-    exit(signum);
-}
+constexpr unsigned CHECK_INTERVAL_MS = 2000;
 
 std::vector<Process> getNewProcesses(const std::unordered_map<unsigned, Process> &old,
                                      const std::unordered_map<unsigned, Process> &now) {
@@ -51,12 +44,7 @@ inline std::string makeMessage(const Process &process, bool is_expired = false) 
 }
 
 int main() {
-    for (int signum = 0; signum < NSIG; ++signum) {
-        signal(signum, signalHandler);
-    }
-
-    openlog("AuditDaemon", LOG_PID, LOG_DAEMON);
-    syslog(LOG_NOTICE, "AuditDaemon started");
+    openLog();
 
     std::unordered_map<unsigned, Process> processes = std::move(getpids());
 

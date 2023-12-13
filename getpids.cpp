@@ -7,17 +7,22 @@
 #include <dirent.h>
 #include <filesystem>
 
+#include "getpids.h"
 #include "process.h"
+#include "logger.h"
 
-// /proc/[PID]/status
+// parsing file /proc/[PID]/status
 std::string getProcessStatusValue(const std::string &pid, const std::string &key) {
     std::ifstream statusFile("/proc/" + pid + "/status");
-    std::string line;
 
     if (!statusFile.is_open()) {
-        std::cerr << "Ошибка открытия файла: /proc/" + pid + "/status"  << std::endl;
-        return "";
+        std::string err_message = "Error opening file: /proc/" + pid + "/status";
+        std::cerr << err_message << std::endl;
+        syslog(LOG_ERR, "%s", err_message.c_str());
+        exit(1);
     }
+
+    std::string line;
 
     while (std::getline(statusFile, line)) {
         std::istringstream iss(line);
@@ -35,8 +40,16 @@ std::string getProcessStatusValue(const std::string &pid, const std::string &key
     return "";
 }
 
+// parsing file /proc/[pid]/stat
 unsigned getUptime(const std::string &pid) {
     std::ifstream statFile("/proc/" + pid + "/stat");
+
+    if (!statFile.is_open()) {
+        std::string err_message = "Error opening file: /proc/" + pid + "/stat";
+        syslog(LOG_ERR, "%s", err_message.c_str());
+        exit(1);
+    }
+
     std::string line, dummy;
     unsigned uptime;
 
@@ -53,6 +66,7 @@ unsigned getUptime(const std::string &pid) {
     return uptime;
 }
 
+// parsing processes from /proc
 std::unordered_map<unsigned, Process> getpids() {
     std::unordered_map<unsigned, Process> processes;
 
@@ -62,7 +76,8 @@ std::unordered_map<unsigned, Process> getpids() {
     dir = opendir("/proc");
 
     if (dir == nullptr) {
-        std::cerr << "Error opening /proc directory" << std::endl;
+        std::string err_message = "Error opening directory: /proc";
+        syslog(LOG_ERR, "%s", err_message.c_str());
         exit(1);
     }
 
@@ -76,6 +91,13 @@ std::unordered_map<unsigned, Process> getpids() {
 
             std::string command;
             std::ifstream cmdlineFile("/proc/" + pid + "/cmdline");
+
+            if (!cmdlineFile.is_open()) {
+                std::string err_message = "Error opening file: /proc/" + pid + "/cmdline";
+                std::cerr << err_message << std::endl;
+                syslog(LOG_ERR, "%s", err_message.c_str());
+            }
+
             std::getline(cmdlineFile, command);
 
             unsigned uptime = getUptime(pid);
@@ -83,6 +105,7 @@ std::unordered_map<unsigned, Process> getpids() {
             processes.emplace(pid_int, Process{pid, user, name, command, uptime});
         }
     }
+
     closedir(dir);
     return processes;
 }
